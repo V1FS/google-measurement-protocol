@@ -5,7 +5,7 @@ except ImportError:
     from urlparse import parse_qs
 
 from httmock import response, urlmatch, with_httmock
-from prices import Price
+from prices import Money, TaxedMoney
 
 from . import (Event, Item, PageView, report, SystemInfo, Requestable,
                EnhancedItem, Transaction, EnhancedPurchase, payloads)
@@ -77,32 +77,32 @@ class EventTest(TestCase):
                          {'t': 'event', 'ec': 'category', 'ea': 'action'})
 
     def test_optional_params(self):
-        evt = Event('category', 'action', label='label', value=7)
+        evt = Event('category', 'action', label='label', value=7, host_name='host')
         self.assertEqual(
             evt.get_payload(),
             {'t': 'event', 'ec': 'category', 'ea': 'action', 'el': 'label',
-             'ev': '7'})
+             'ev': '7', 'dh' : 'host'})
 
 
 class ItemTest(TestCase):
 
     def test_required_params(self):
-        item = Item('item-01', Price(10, currency='USD'))
+        item = Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))
         self.assertEqual(
             item.get_payload_for_transaction('trans-01'),
             {'t': 'item', 'in': 'item-01', 'cu': 'USD', 'ip': '10',
              'ti': 'trans-01'})
 
     def test_quantity(self):
-        item = Item('item-01', Price(10, currency='USD'), quantity=2)
+        item = Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')), quantity=2)
         self.assertEqual(
             item.get_payload_for_transaction('trans-01'),
             {'t': 'item', 'in': 'item-01', 'cu': 'USD', 'ip': '10',
              'iq': '2', 'ti': 'trans-01'})
-        self.assertEqual(item.get_subtotal(), Price(20, currency='USD'))
+        self.assertEqual(item.get_subtotal(), TaxedMoney(net=Money(20, currency='USD'), gross=Money(20, currency='USD')))
 
     def test_optional_params(self):
-        item = Item('item-01', Price(10, currency='USD'), item_id='it01',
+        item = Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')), item_id='it01',
                     category='cat')
         self.assertEqual(
             item.get_payload_for_transaction('trans-01'),
@@ -116,7 +116,7 @@ class TransactionTest(TestCase):
         self.assertRaises(ValueError, lambda: Transaction('trans-01', []))
 
     def test_required_params(self):
-        items = [Item('item-01', Price(10, currency='USD'))]
+        items = [Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))]
         trans = Transaction('trans-01', items)
         self.assertEqual(
             trans.get_payload(),
@@ -124,25 +124,25 @@ class TransactionTest(TestCase):
              'tt': '0'})
 
     def test_revenue_override(self):
-        items = [Item('item-01', Price(10, currency='USD'))]
+        items = [Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))]
         trans = Transaction('trans-01', items,
-                            revenue=Price(net=40, gross=50, currency='USD'))
+                            revenue=TaxedMoney(net=Money(40, currency='USD'), gross=Money(50, currency='USD')))
         self.assertEqual(
             trans.get_payload(),
             {'t': 'transaction', 'ti': 'trans-01', 'cu': 'USD', 'tr': '50',
              'tt': '10'})
 
     def test_shipping(self):
-        items = [Item('item-01', Price(10, currency='USD'))]
+        items = [Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))]
         trans = Transaction('trans-01', items,
-                            shipping=Price(100, currency='USD'))
+                            shipping=TaxedMoney(net=Money(100, currency='USD'), gross=Money(100, currency='USD')))
         self.assertEqual(
             trans.get_payload(),
             {'t': 'transaction', 'ti': 'trans-01', 'cu': 'USD', 'tr': '110',
              'ts': '100', 'tt': '0'})
 
     def test_affiliation(self):
-        items = [Item('item-01', Price(10, currency='USD'))]
+        items = [Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))]
         trans = Transaction('trans-01', items, affiliation='loyalty')
         self.assertEqual(
             trans.get_payload(),
@@ -150,8 +150,8 @@ class TransactionTest(TestCase):
              'tt': '0', 'ta': 'loyalty'})
 
     def test_iter(self):
-        items = [Item('item-01', Price(10, currency='USD')),
-                 Item('item-02', Price(10, currency='USD'))]
+        items = [Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD'))),
+                 Item('item-02', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))]
         trans = Transaction('trans-01', items)
         trans_payloads = list(trans)
         self.assertEqual(len(trans_payloads), 3)
@@ -209,8 +209,8 @@ class EnhancedPurchaseTest(TestCase):
 class PayloadsTest(TestCase):
 
     def test_payloads(self):
-        items = [Item('item-01', Price(10, currency='USD')),
-                 Item('item-02', Price(10, currency='USD'))]
+        items = [Item('item-01', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD'))),
+                 Item('item-02', TaxedMoney(net=Money(10, currency='USD'), gross=Money(10, currency='USD')))]
         trans = Transaction('trans-01', items)
         trans_payloads = list(payloads(
             'tracking-id',

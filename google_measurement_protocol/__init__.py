@@ -86,16 +86,18 @@ class PageView(
         return payload
 
 
-class Event(Requestable, namedtuple('Event', 'category action label value')):
+class Event(Requestable, namedtuple('Event', 'category action label value host_name')):
 
-    def __new__(cls, category, action, label=None, value=None):
-        return super(Event, cls).__new__(cls, category, action, label, value)
+    def __new__(cls, category, action, label=None, value=None, host_name=None):
+        return super(Event, cls).__new__(cls, category, action, label, value, host_name)
 
     def get_payload(self):
         payload = {
             't': 'event',
             'ec': self.category,
             'ea': self.action}
+        if self.host_name:
+            payload['dh'] = self.host_name
         if self.label:
             payload['el'] = self.label
         if self.value:
@@ -131,11 +133,11 @@ class Transaction(
         if self.affiliation:
             payload['ta'] = self.affiliation
         total = self.get_total()
-        payload['tr'] = str(total.gross)
-        payload['tt'] = str(total.tax)
+        payload['tr'] = str(total.gross.amount)
+        payload['tt'] = str(total.tax.amount)
         payload['cu'] = total.currency
         if self.shipping:
-            payload['ts'] = str(self.shipping.gross)
+            payload['ts'] = str(self.shipping.gross.amount)
         return payload
 
     def __iter__(self):
@@ -161,7 +163,7 @@ class Item(namedtuple('Item', 'name unit_price quantity item_id category')):
             't': 'item',
             'ti': transaction_id,
             'in': self.name}
-        payload['ip'] = str(self.unit_price.gross)
+        payload['ip'] = str(self.unit_price.gross.amount)
         payload['cu'] = self.unit_price.currency
         if self.quantity:
             payload['iq'] = str(int(self.quantity))
