@@ -86,6 +86,27 @@ class PageView(
         return payload
 
 
+class ScreenView(
+        Requestable,
+        namedtuple('ScreenView',
+                   'name app_name app_version app_id')):
+
+    def __new__(cls, name, app_name=None, app_version=None, app_id=None):
+        return super(ScreenView, cls).__new__(cls, name, app_name, app_version, app_id)
+
+    def get_payload(self):
+        payload = {'t': 'screenview'}
+        if self.name:
+            payload['cd'] = self.name
+        if self.app_name:
+            payload['an'] = self.app_name
+        if self.app_id:
+            payload['aid'] = self.app_id
+        if self.app_version:
+            payload['av'] = self.app_version
+        return payload
+
+
 class Event(Requestable, namedtuple('Event', 'category action label value host_name')):
 
     def __new__(cls, category, action, label=None, value=None, host_name=None):

@@ -40,6 +40,21 @@ view = PageView(path='/my-page/', title='My Page', referrer='http://example.com/
 report('UA-123456-1', client_id, view)
 ```
 
+Reporting a screen view
+---------------------
+
+User the `ScreenView` object:
+```python
+Screenview(name, app_name, app_version, app_id)
+```
+
+Example:
+```python
+from google_measurement_protocol import ScreenView, report
+
+view = ScreenView(name="Register Account", app_name="Student Super", app_version="1.0.3", app_id="au.com.v1.StudentSuper")
+report('UA-123456-1', client_id, view)
+```
 
 Reporting an event
 ------------------

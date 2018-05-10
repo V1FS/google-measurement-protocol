@@ -7,7 +7,7 @@ except ImportError:
 from httmock import response, urlmatch, with_httmock
 from prices import Money, TaxedMoney
 
-from . import (Event, Item, PageView, report, SystemInfo, Requestable,
+from . import (Event, Item, PageView, ScreenView, report, SystemInfo, Requestable,
                EnhancedItem, Transaction, EnhancedPurchase, payloads)
 
 
@@ -67,6 +67,14 @@ class PageViewTest(TestCase):
         self.assertEqual(
             view.get_payload(),
             {'t': 'pageview', 'dp': '/', 'dr': 'referrer', 'dt': 'title'})
+
+class ScreenViewTest(TestCase):
+
+    def test_optional_params(self):
+        view = ScreenView("TestScreen")
+        self.assertEqual(
+            view.get_payload(),
+            {'t': 'screenview', 'cd': 'TestScreen'})
 
 
 class EventTest(TestCase):
