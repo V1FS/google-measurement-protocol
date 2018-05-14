@@ -63,10 +63,10 @@ class PageViewTest(TestCase):
             {'t': 'pageview', 'dl': 'http://example.com/my-page/'})
 
     def test_optional_params(self):
-        view = PageView('/', title='title', referrer='referrer')
+        view = PageView('/', title='title', referrer='referrer', gclid='blat')
         self.assertEqual(
             view.get_payload(),
-            {'t': 'pageview', 'dp': '/', 'dr': 'referrer', 'dt': 'title'})
+            {'t': 'pageview', 'dp': '/', 'dr': 'referrer', 'dt': 'title', 'gclid':'blat'})
 
 class ScreenViewTest(TestCase):
 

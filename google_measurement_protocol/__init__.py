@@ -64,12 +64,12 @@ class SystemInfo(Requestable, namedtuple('SystemInfo', 'language')):
 class PageView(
         Requestable,
         namedtuple('PageView',
-                   'path host_name location title referrer')):
+                   'path host_name location title referrer gclid dclid')):
 
     def __new__(cls, path=None, host_name=None, location=None, title=None,
-                referrer=None):
+                referrer=None, gclid=None, dclid=None):
         return super(PageView, cls).__new__(cls, path, host_name, location,
-                                            title, referrer)
+                                            title, referrer, gclid, dclid)
 
     def get_payload(self):
         payload = {'t': 'pageview'}
@@ -83,6 +83,10 @@ class PageView(
             payload['dt'] = self.title
         if self.referrer:
             payload['dr'] = self.referrer
+        if self.gclid:
+            payload['gclid'] = self.gclid
+        if self.dclid:
+            payload['dclid'] = self.dclid
         return payload
 
 
