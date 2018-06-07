@@ -6,30 +6,24 @@ TRACKING_URI = 'https://ssl.google-analytics.com/collect'
 
 
 def _request(data, extra_headers):
-    return requests.post(TRACKING_URI, data=data, headers=extra_headers,
-                         timeout=5.0)
+    return requests.post(TRACKING_URI, data=data, headers=extra_headers, timeout=5.0)
 
 
-def report(tracking_id, client_id, requestable, extra_info=None,
-           extra_headers=None):
+def report(tracking_id, client_id, requestable, extra_info=None, extra_headers=None):
     """Actually report measurements to Google Analytics."""
-    return [_request(data, extra_headers)
-            for data, extra_headers in payloads(
-            tracking_id, client_id, requestable, extra_info, extra_headers)]
+    return [
+        _request(data, extra_headers)
+        for data, extra_headers in payloads(tracking_id, client_id, requestable, extra_info, extra_headers)
+    ]
 
 
-def payloads(tracking_id, client_id, requestable, extra_info=None,
-             extra_headers=None):
+def payloads(tracking_id, client_id, requestable, extra_info=None, extra_headers=None):
     """Get data and headers of API requests for Google Analytics.
 
     Generates a sequence of (data, headers) pairs. Both `data` and `headers`
     are dicts.
     """
-    extra_payload = {
-        'v': '1',
-        'tid': tracking_id,
-        'cid': client_id,
-        'aip': '1'}
+    extra_payload = {'v': '1', 'tid': tracking_id, 'cid': client_id, 'aip': '1'}
     if extra_info:
         for payload in extra_info:
             extra_payload.update(payload)
@@ -41,7 +35,6 @@ def payloads(tracking_id, client_id, requestable, extra_info=None,
 
 
 class Requestable(object):
-
     def get_payload(self):
         raise NotImplementedError()
 
@@ -50,7 +43,6 @@ class Requestable(object):
 
 
 class SystemInfo(Requestable, namedtuple('SystemInfo', 'language')):
-
     def __new__(cls, language=None):
         return super(SystemInfo, cls).__new__(cls, language)
 
@@ -63,13 +55,26 @@ class SystemInfo(Requestable, namedtuple('SystemInfo', 'language')):
 
 class PageView(
         Requestable,
-        namedtuple('PageView',
-                   'path host_name location title referrer gclid dclid')):
-
-    def __new__(cls, path=None, host_name=None, location=None, title=None,
-                referrer=None, gclid=None, dclid=None):
-        return super(PageView, cls).__new__(cls, path, host_name, location,
-                                            title, referrer, gclid, dclid)
+        namedtuple(
+            'PageView',
+            'path host_name location title referrer gclid dclid campaign_name campaign_source campaign_medium campaign_term campaign_content'
+        )):
+    def __new__(cls,
+                path=None,
+                host_name=None,
+                location=None,
+                title=None,
+                referrer=None,
+                gclid=None,
+                dclid=None,
+                campaign_name=None,
+                campaign_source=None,
+                campaign_medium=None,
+                campaign_term=None,
+                campaign_content=None):
+        return super(PageView,
+                     cls).__new__(cls, path, host_name, location, title, referrer, gclid, dclid, campaign_name,
+                                  campaign_source, campaign_medium, campaign_term, campaign_content)
 
     def get_payload(self):
         payload = {'t': 'pageview'}
@@ -87,14 +92,20 @@ class PageView(
             payload['gclid'] = self.gclid
         if self.dclid:
             payload['dclid'] = self.dclid
+        if self.campaign_name:
+            payload['cn'] = self.campaign_name
+        if  self.campaign_source:
+            payload['cs'] = self.campaign_source
+        if  self.campaign_medium:
+            payload['cm'] = self.campaign_medium
+        if  self.campaign_term:
+            payload['ck'] = self.campaign_term
+        if  self.campaign_content:
+            payload['cc'] = self.campaign_content
         return payload
 
 
-class ScreenView(
-        Requestable,
-        namedtuple('ScreenView',
-                   'name app_name app_version app_id')):
-
+class ScreenView(Requestable, namedtuple('ScreenView', 'name app_name app_version app_id')):
     def __new__(cls, name, app_name=None, app_version=None, app_id=None):
         return super(ScreenView, cls).__new__(cls, name, app_name, app_version, app_id)
 
@@ -112,15 +123,11 @@ class ScreenView(
 
 
 class Event(Requestable, namedtuple('Event', 'category action label value host_name')):
-
     def __new__(cls, category, action, label=None, value=None, host_name=None):
         return super(Event, cls).__new__(cls, category, action, label, value, host_name)
 
     def get_payload(self):
-        payload = {
-            't': 'event',
-            'ec': self.category,
-            'ea': self.action}
+        payload = {'t': 'event', 'ec': self.category, 'ea': self.action}
         if self.host_name:
             payload['dh'] = self.host_name
         if self.label:
@@ -130,17 +137,11 @@ class Event(Requestable, namedtuple('Event', 'category action label value host_n
         return payload
 
 
-class Transaction(
-        Requestable,
-        namedtuple('Transaction',
-                   'transaction_id items revenue shipping affiliation')):
-
-    def __new__(cls, transaction_id, items, revenue=None, shipping=None,
-                affiliation=None):
+class Transaction(Requestable, namedtuple('Transaction', 'transaction_id items revenue shipping affiliation')):
+    def __new__(cls, transaction_id, items, revenue=None, shipping=None, affiliation=None):
         if not items:
             raise ValueError('You need to specify at least one item')
-        return super(Transaction, cls).__new__(
-            cls, transaction_id, items, revenue, shipping, affiliation)
+        return super(Transaction, cls).__new__(cls, transaction_id, items, revenue, shipping, affiliation)
 
     def get_total(self):
         if self.revenue:
@@ -152,9 +153,7 @@ class Transaction(
         return total
 
     def get_payload(self):
-        payload = {
-            't': 'transaction',
-            'ti': self.transaction_id}
+        payload = {'t': 'transaction', 'ti': self.transaction_id}
         if self.affiliation:
             payload['ta'] = self.affiliation
         total = self.get_total()
@@ -172,11 +171,8 @@ class Transaction(
 
 
 class Item(namedtuple('Item', 'name unit_price quantity item_id category')):
-
-    def __new__(cls, name, unit_price, quantity=None, item_id=None,
-                category=None):
-        return super(Item, cls).__new__(cls, name, unit_price, quantity,
-                                        item_id, category)
+    def __new__(cls, name, unit_price, quantity=None, item_id=None, category=None):
+        return super(Item, cls).__new__(cls, name, unit_price, quantity, item_id, category)
 
     def get_subtotal(self):
         if self.quantity:
@@ -184,10 +180,7 @@ class Item(namedtuple('Item', 'name unit_price quantity item_id category')):
         return self.unit_price
 
     def get_payload_for_transaction(self, transaction_id):
-        payload = {
-            't': 'item',
-            'ti': transaction_id,
-            'in': self.name}
+        payload = {'t': 'item', 'ti': transaction_id, 'in': self.name}
         payload['ip'] = str(self.unit_price.gross.amount)
         payload['cu'] = self.unit_price.currency
         if self.quantity:
@@ -199,14 +192,9 @@ class Item(namedtuple('Item', 'name unit_price quantity item_id category')):
         return payload
 
 
-class EnhancedItem(namedtuple('EnhancedItem',
-                   'name unit_price quantity item_id category brand variant')):
-
-    def __new__(cls, name, unit_price, quantity=None, item_id=None,
-                category=None, brand=None, variant=None):
-        return super(EnhancedItem, cls).__new__(cls, name, unit_price,
-                                                quantity, item_id, category,
-                                                brand, variant)
+class EnhancedItem(namedtuple('EnhancedItem', 'name unit_price quantity item_id category brand variant')):
+    def __new__(cls, name, unit_price, quantity=None, item_id=None, category=None, brand=None, variant=None):
+        return super(EnhancedItem, cls).__new__(cls, name, unit_price, quantity, item_id, category, brand, variant)
 
     def get_subtotal(self):
         if self.quantity:
@@ -217,7 +205,8 @@ class EnhancedItem(namedtuple('EnhancedItem',
         payload = {
             'pr{0}ps'.format(position): '{0}'.format(position),
             'pr{0}nm'.format(position): self.name,
-            'pr{0}pr'.format(position): self.unit_price}
+            'pr{0}pr'.format(position): self.unit_price
+        }
         quantity = self.quantity or 1
         payload['pr{0}qt'.format(position)] = '{0}'.format(quantity)
         if self.item_id:
@@ -233,15 +222,21 @@ class EnhancedItem(namedtuple('EnhancedItem',
 
 
 class EnhancedPurchase(Requestable,
-                       namedtuple('EnhancedPurchase', 'transaction_id items url_page revenue tax shipping host affiliation coupon')):
-
-    def __new__(cls, transaction_id, items, url_page, revenue=None, tax=None,
-                shipping=None, host=None, affiliation=None, coupon=None):
+                       namedtuple('EnhancedPurchase',
+                                  'transaction_id items url_page revenue tax shipping host affiliation coupon')):
+    def __new__(cls,
+                transaction_id,
+                items,
+                url_page,
+                revenue=None,
+                tax=None,
+                shipping=None,
+                host=None,
+                affiliation=None,
+                coupon=None):
         if not items:
             raise ValueError('You need to specify at least one item')
-        return super(EnhancedPurchase, cls).__new__(cls, transaction_id, items,
-                                                    url_page, revenue, tax,
-                                                    shipping, host,
+        return super(EnhancedPurchase, cls).__new__(cls, transaction_id, items, url_page, revenue, tax, shipping, host,
                                                     affiliation, coupon)
 
     def get_total(self):
@@ -256,10 +251,7 @@ class EnhancedPurchase(Requestable,
         return total
 
     def get_payload(self):
-        payload = {
-            'pa': 'purchase',
-            'ti': self.transaction_id,
-            'dp': self.url_page}
+        payload = {'pa': 'purchase', 'ti': self.transaction_id, 'dp': self.url_page}
         tax = self.tax or 0
         payload['tt'] = str(tax)
         total = self.get_total()
